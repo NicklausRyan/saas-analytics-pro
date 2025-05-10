@@ -187,10 +187,31 @@
                 </div>
             </div>
 
+            <hr>            <div class="form-group">
+                @include('shared.tracking-code')
+            </div>
+
             <hr>
 
             <div class="form-group">
-                @include('shared.tracking-code')
+                <div class="row">
+                    <div class="col"><label for="i-stripe-api-key">{{ __('Stripe API Key (Restricted)') }}</label></div>
+                    <div class="col-auto">
+                        <span data-tooltip="true" title="{{ __('Restricted Stripe API key used for account linking. No permission changes will be made.') }}" class="d-flex align-items-center">@include('icons.info', ['class' => 'fill-current text-muted width-4 height-4'])</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text cursor-pointer" data-tooltip="true" data-title="{{ __('Show API key') }}" data-password="i-stripe-api-key" data-password-show="{{ __('Show API key') }}" data-password-hide="{{ __('Hide API key') }}">@include('icons.lock', ['class' => 'width-4 height-4 fill-current text-muted'])</div>
+                    </div>
+                    <input id="i-stripe-api-key" type="password" class="form-control{{ $errors->has('stripe_api_key') ? ' is-invalid' : '' }}" name="stripe_api_key" value="{{ old('stripe_api_key') ?? $website->stripe_api_key }}" placeholder="{{ __('Restricted Stripe API key') }}">
+                </div>
+                @if ($errors->has('stripe_api_key'))
+                    <span class="invalid-feedback d-block" role="alert">
+                        <strong>{{ $errors->first('stripe_api_key') }}</strong>
+                    </span>
+                @endif
+                <small class="form-text text-muted">{{ __('Limited API key with restricted permissions from your Stripe dashboard.') }}</small>
             </div>
 
             <button type="submit" name="submit" class="btn btn-primary">{{ __('Save') }}</button>

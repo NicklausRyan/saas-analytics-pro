@@ -15,6 +15,35 @@ use Illuminate\Support\Facades\Crypt;
 class Website extends Model
 {
     /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = [
+        'domain',
+        'user_id',
+        'privacy',
+        'password',
+        'email',
+        'exclude_bots',
+        'exclude_params',
+        'exclude_ips',
+        'tracking_code',
+        'domain_key',
+        'stripe_api_key'
+    ];
+
+    /**
+     * The attributes that should be hidden for arrays.
+     *
+     * @var array
+     */    protected $hidden = [
+        'password',
+        'stripe_api_key',
+    ];
+      /* The stripe_api_key accessors and mutators are defined below */
+    
+    /**
      * @param Builder $query
      * @param $value
      * @return Builder
@@ -107,5 +136,49 @@ class Website extends Model
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+    /**
+     * Encrypt the Stripe API key before storing.
+     *
+     * @param  string|null  $value
+     * @return void
+     */
+    public function setStripeApiKeyAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['stripe_api_key'] = Crypt::encryptString($value);
+        } elseif ($value === '') {
+            // If an empty string is passed, remove the API key
+            $this->attributes['stripe_api_key'] = null;
+        }
+    }
+
+    /**
+     * Decrypt the Stripe API key when accessed.
+     *
+     * @param  string|null  $value
+     * @return string|null
+     */
+    public function getStripeApiKeyAttribute($value)
+    {
+        if (!empty($value)) {
+            try {
+                return Crypt::decryptString($value);
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get the payments for this website.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function payments()
+    {
+        return $this->hasMany('App\Models\WebsitePayment');
     }
 }
