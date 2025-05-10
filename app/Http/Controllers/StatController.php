@@ -24,7 +24,8 @@ class StatController extends Controller
      * @param Request $request
      * @param $id
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\View\View
-     */    public function index(Request $request, $id)
+     */
+    public function index(Request $request, $id)
     {
         $website = Website::where('domain', $id)->firstOrFail();
 
@@ -35,21 +36,24 @@ class StatController extends Controller
         $range = $this->range();
 
         $visitorsMap = $this->getTraffic($website, $range, 'visitors');
-        $pageviewsMap = $this->getTraffic($website, $range, 'pageviews');        $totalVisitors = $totalPageviews = 0;
+        $pageviewsMap = $this->getTraffic($website, $range, 'pageviews');
+        $totalVisitors = $totalPageviews = 0;
         foreach ($visitorsMap as $key => $value) {
             $totalVisitors = $totalVisitors + $value;
-        }        foreach ($pageviewsMap as $key => $value) {
+        }
+        foreach ($pageviewsMap as $key => $value) {
             $totalPageviews = $totalPageviews + $value;
         }
-          // Calculate single-page sessions (for bounce rate)
+
+        // Calculate single-page sessions (for bounce rate)
         $singlePageSessions = Stat::where([['website_id', '=', $website->id], ['name', '=', 'landing_page']])
             ->whereBetween('date', [$range['from'], $range['to']])
             ->count();
-            
+
         // Calculate bounce rate (single-page sessions ÷ total sessions)
         // Avoid division by zero
         $bounceRate = $totalVisitors > 0 ? ($singlePageSessions / $totalVisitors) * 100 : 0;
-        
+
         // Calculate average session time
         // Assumption: Multiple entries in Recent table for the same visitor within a session timeframe represent session duration
         // Get the sessions data grouped by visitor
@@ -57,79 +61,80 @@ class StatController extends Controller
             ->whereBetween('created_at', [$range['from'] . ' 00:00:00', $range['to'] . ' 23:59:59'])
             ->orderBy('created_at')
             ->get(['id', 'created_at'])
-            ->groupBy(function($item) {
+            ->groupBy(function ($item) {
                 // Group by hour to simulate sessions (since we don't have actual session IDs)
                 return Carbon::parse($item->created_at)->format('Y-m-d H');
             });
-            
+
         $totalSessionTime = 0;
         $sessionCount = 0;
-        
-        foreach($sessionData as $sessions) {
-            if($sessions->count() > 1) {
+
+        foreach ($sessionData as $sessions) {
+            if ($sessions->count() > 1) {
                 // Calculate time between first and last hit in seconds
                 $firstHit = Carbon::parse($sessions->first()->created_at);
                 $lastHit = Carbon::parse($sessions->last()->created_at);
                 $sessionTime = $lastHit->diffInSeconds($firstHit);
-                
+
                 // Add to total
                 $totalSessionTime += $sessionTime;
                 $sessionCount++;
             }
         }
-        
+
         // Calculate average session time in seconds
         $avgSessionTime = $sessionCount > 0 ? $totalSessionTime / $sessionCount : 0;
-        
+
         // Create a bounce rate map for the chart (calculate for each day/period)
         $bounceRateMap = [];
         // Create average session time map for the chart
-        $avgSessionTimeMap = [];        // Calculate bounce rate and average session time for each time period in the map
+        $avgSessionTimeMap = [];
+        // Calculate bounce rate and average session time for each time period in the map
         if ($range['unit'] == 'hour') {
             // For hourly data (single day)
             foreach ($visitorsMap as $hour => $visitors) {
                 // For hourly data, we use the landing_page_hours stats
                 $hourSinglePageSessions = Stat::where([
-                    ['website_id', '=', $website->id], 
+                    ['website_id', '=', $website->id],
                     ['name', '=', 'landing_page_hours'],
                     ['value', '=', $hour]
                 ])
-                ->whereBetween('date', [$range['from'], $range['to']])
-                ->sum('count');
-                
+                    ->whereBetween('date', [$range['from'], $range['to']])
+                    ->sum('count');
+
                 // Avoid division by zero
                 $bounceRateMap[$hour] = $visitors > 0 ? ($hourSinglePageSessions / $visitors) * 100 : 0;
-                
+
                 // Calculate average session time for this hour
                 $hourDateTime = $range['from'] . ' ' . $hour . ':00:00';
                 $nextHour = $range['from'] . ' ' . $hour . ':59:59';
-                
+
                 // Get session data for this hour
                 $hourSessionData = Recent::where('website_id', '=', $website->id)
                     ->whereBetween('created_at', [$hourDateTime, $nextHour])
                     ->orderBy('created_at')
                     ->get(['id', 'created_at', 'page'])
-                    ->groupBy(function($item) {
+                    ->groupBy(function ($item) {
                         // Group by page to simulate sessions
                         return $item->page;
                     });
-                    
+
                 $hourTotalSessionTime = 0;
                 $hourSessionCount = 0;
-                
-                foreach($hourSessionData as $sessions) {
-                    if($sessions->count() > 1) {
+
+                foreach ($hourSessionData as $sessions) {
+                    if ($sessions->count() > 1) {
                         // Calculate time between first and last hit in seconds
                         $firstHit = Carbon::parse($sessions->first()->created_at);
                         $lastHit = Carbon::parse($sessions->last()->created_at);
                         $sessionTime = $lastHit->diffInSeconds($firstHit);
-                        
+
                         // Add to total
                         $hourTotalSessionTime += $sessionTime;
                         $hourSessionCount++;
                     }
                 }
-                
+
                 // Calculate average session time in seconds
                 $avgSessionTimeMap[$hour] = $hourSessionCount > 0 ? $hourTotalSessionTime / $hourSessionCount : 0;
             }
@@ -139,7 +144,7 @@ class StatController extends Controller
                 // Format the period date correctly based on the unit
                 $periodStart = null;
                 $periodEnd = null;
-                
+
                 if ($range['unit'] == 'day') {
                     // For daily data
                     $periodStart = $date . ' 00:00:00';
@@ -155,44 +160,44 @@ class StatController extends Controller
                     $periodStart = $dateObj->copy()->startOfYear()->format('Y-m-d 00:00:00');
                     $periodEnd = $dateObj->copy()->endOfYear()->format('Y-m-d 23:59:59');
                 }
-                
+
                 // Get single page sessions for this period
                 $periodSinglePageSessions = Stat::where([
-                    ['website_id', '=', $website->id], 
+                    ['website_id', '=', $website->id],
                     ['name', '=', 'landing_page']
                 ])
-                ->whereBetween('date', [$periodStart, $periodEnd])
-                ->sum('count');
-                
+                    ->whereBetween('date', [$periodStart, $periodEnd])
+                    ->sum('count');
+
                 // Avoid division by zero
                 $bounceRateMap[$date] = $visitors > 0 ? ($periodSinglePageSessions / $visitors) * 100 : 0;
-                
+
                 // Calculate average session time for this period
                 $periodSessionData = Recent::where('website_id', '=', $website->id)
                     ->whereBetween('created_at', [$periodStart, $periodEnd])
                     ->orderBy('created_at')
                     ->get(['id', 'created_at', 'page'])
-                    ->groupBy(function($item) {
+                    ->groupBy(function ($item) {
                         // Group by page to simulate sessions (since we don't have actual session IDs)
                         return $item->page;
                     });
-                    
+
                 $periodTotalSessionTime = 0;
                 $periodSessionCount = 0;
-                
-                foreach($periodSessionData as $sessions) {
-                    if($sessions->count() > 1) {
+
+                foreach ($periodSessionData as $sessions) {
+                    if ($sessions->count() > 1) {
                         // Calculate time between first and last hit in seconds
                         $firstHit = Carbon::parse($sessions->first()->created_at);
                         $lastHit = Carbon::parse($sessions->last()->created_at);
                         $sessionTime = $lastHit->diffInSeconds($firstHit);
-                        
+
                         // Add to total
                         $periodTotalSessionTime += $sessionTime;
                         $periodSessionCount++;
                     }
                 }
-                
+
                 // Calculate average session time in seconds
                 $avgSessionTimeMap[$date] = $periodSessionCount > 0 ? $periodTotalSessionTime / $periodSessionCount : 0;
             }
@@ -201,39 +206,39 @@ class StatController extends Controller
         $totalVisitorsOld = Stat::where([['website_id', '=', $website->id], ['name', '=', 'visitors']])
             ->whereBetween('date', [$range['from_old'], $range['to_old']])
             ->sum('count');
-              // Calculate bounce rate for previous period
+        // Calculate bounce rate for previous period
         $singlePageSessionsOld = Stat::where([['website_id', '=', $website->id], ['name', '=', 'landing_page']])
             ->whereBetween('date', [$range['from_old'], $range['to_old']])
             ->count();
-            
+
         $bounceRateOld = $totalVisitorsOld > 0 ? ($singlePageSessionsOld / $totalVisitorsOld) * 100 : 0;
-        
+
         // Calculate average session time for previous period
         $sessionDataOld = Recent::where('website_id', '=', $website->id)
             ->whereBetween('created_at', [$range['from_old'] . ' 00:00:00', $range['to_old'] . ' 23:59:59'])
             ->orderBy('created_at')
             ->get(['id', 'created_at', 'page'])
-            ->groupBy(function($item) {
+            ->groupBy(function ($item) {
                 // Group by page to simulate sessions
                 return $item->page;
             });
-            
+
         $totalSessionTimeOld = 0;
         $sessionCountOld = 0;
-        
-        foreach($sessionDataOld as $sessions) {
-            if($sessions->count() > 1) {
+
+        foreach ($sessionDataOld as $sessions) {
+            if ($sessions->count() > 1) {
                 // Calculate time between first and last hit in seconds
                 $firstHit = Carbon::parse($sessions->first()->created_at);
                 $lastHit = Carbon::parse($sessions->last()->created_at);
                 $sessionTime = $lastHit->diffInSeconds($firstHit);
-                
+
                 // Add to total
                 $totalSessionTimeOld += $sessionTime;
                 $sessionCountOld++;
             }
         }
-        
+
         // Calculate average session time in seconds for previous period
         $avgSessionTimeOld = $sessionCountOld > 0 ? $totalSessionTimeOld / $sessionCountOld : 0;
 
@@ -267,30 +272,31 @@ class StatController extends Controller
 
         $events = $this->getEvents($website, $range, null, null, 'count', 'desc')
             ->limit(5)
-            ->get();        // Format average session time for display (MM:SS format)
+            ->get();
+        // Format average session time for display (MM:SS format)
         $formattedAvgSessionTime = gmdate("i:s", round($avgSessionTime));
         $formattedAvgSessionTimeOld = gmdate("i:s", round($avgSessionTimeOld));
 
         return view('stats.container', [
-            'view' => 'overview', 
-            'website' => $website, 
-            'range' => $range, 
-            'referrers' => $referrers, 
-            'pages' => $pages, 
-            'visitorsMap' => $visitorsMap, 
-            'pageviewsMap' => $pageviewsMap, 
-            'bounceRateMap' => $bounceRateMap, 
+            'view' => 'overview',
+            'website' => $website,
+            'range' => $range,
+            'referrers' => $referrers,
+            'pages' => $pages,
+            'visitorsMap' => $visitorsMap,
+            'pageviewsMap' => $pageviewsMap,
+            'bounceRateMap' => $bounceRateMap,
             'avgSessionTimeMap' => $avgSessionTimeMap,
-            'countries' => $countries, 
-            'browsers' => $browsers, 
-            'operatingSystems' => $operatingSystems, 
-            'events' => $events, 
-            'totalVisitors' => $totalVisitors, 
-            'totalPageviews' => $totalPageviews, 
-            'totalVisitorsOld' => $totalVisitorsOld, 
-            'totalPageviewsOld' => $totalPageviewsOld, 
-            'totalReferrers' => $totalReferrers, 
-            'bounceRate' => $bounceRate, 
+            'countries' => $countries,
+            'browsers' => $browsers,
+            'operatingSystems' => $operatingSystems,
+            'events' => $events,
+            'totalVisitors' => $totalVisitors,
+            'totalPageviews' => $totalPageviews,
+            'totalVisitorsOld' => $totalVisitorsOld,
+            'totalPageviewsOld' => $totalPageviewsOld,
+            'totalReferrers' => $totalReferrers,
+            'bounceRate' => $bounceRate,
             'bounceRateOld' => $bounceRateOld,
             'avgSessionTime' => $avgSessionTime,
             'avgSessionTimeOld' => $avgSessionTimeOld,
@@ -329,8 +335,7 @@ class StatController extends Controller
 
             $visitors = Recent::selectRaw('COUNT(`website_id`) as `count`, `created_at`')
                 ->where('website_id', '=', $website->id)
-                ->where(function ($query) use ($website)
-                {
+                ->where(function ($query) use ($website) {
                     $query->where('referrer', '<>', $website->domain)
                         ->orWhereNull('referrer');
                 })
@@ -351,8 +356,7 @@ class StatController extends Controller
                 ->get();
 
             $visitorsOld = Recent::where('website_id', '=', $website->id)
-                ->where(function ($query) use ($website)
-                {
+                ->where(function ($query) use ($website) {
                     $query->where('referrer', '<>', $website->domain)
                         ->orWhereNull('referrer');
                 })
@@ -387,22 +391,23 @@ class StatController extends Controller
             foreach ($pageviewsMap as $key => $value) {
                 // Remap the key
                 $pageviewsCount[Carbon::createFromDate($key)->diffForHumans(['options' => Carbon::JUST_NOW])] = $value;
-            }            // For realtime data, we use recents table to calculate bounce rate
+            }
+            // For realtime data, we use recents table to calculate bounce rate
             // Count unique pages per visit in the current time frame
             // A visitor with only one page view is considered a bounce
             $recentVisits = Recent::where('website_id', '=', $website->id)
                 ->whereBetween('created_at', [$from->format('Y-m-d H:i:s'), $to->format('Y-m-d H:i:s')])
                 ->get(['id', 'page', 'referrer', 'created_at'])
-                ->groupBy(function($visit) {
+                ->groupBy(function ($visit) {
                     // Group by referring domain and page as a simple visitor identifier
                     // This is a simplified approach without a visitor ID
                     return $visit->referrer . '|' . $visit->page;
                 });
-                  // Count single page sessions and calculate session times
+            // Count single page sessions and calculate session times
             $singlePageSessions = 0;
             $totalSessionTime = 0;
             $sessionCount = 0;
-            
+
             foreach ($recentVisits as $visitorGroup) {
                 if (count($visitorGroup) === 1) {
                     $singlePageSessions++;
@@ -411,27 +416,27 @@ class StatController extends Controller
                     $firstHit = Carbon::parse($visitorGroup->first()->created_at);
                     $lastHit = Carbon::parse($visitorGroup->last()->created_at);
                     $sessionTime = $lastHit->diffInSeconds($firstHit);
-                    
+
                     $totalSessionTime += $sessionTime;
                     $sessionCount++;
                 }
             }
-            
+
             $bounceRateValue = $totalVisitors > 0 ? ($singlePageSessions / $totalVisitors) * 100 : 0;
             $avgSessionTimeValue = $sessionCount > 0 ? $totalSessionTime / $sessionCount : 0;
-            
+
             // Calculate bounce rate and average session time for previous period
             $recentVisitsOld = Recent::where('website_id', '=', $website->id)
                 ->whereBetween('created_at', [$from_old->format('Y-m-d H:i:s'), $to_old->format('Y-m-d H:i:s')])
                 ->get(['id', 'page', 'referrer', 'created_at'])
-                ->groupBy(function($visit) {
+                ->groupBy(function ($visit) {
                     return $visit->referrer . '|' . $visit->page;
                 });
-                
+
             $singlePageSessionsOld = 0;
             $totalSessionTimeOld = 0;
             $sessionCountOld = 0;
-            
+
             foreach ($recentVisitsOld as $visitorGroup) {
                 if (count($visitorGroup) === 1) {
                     $singlePageSessionsOld++;
@@ -440,18 +445,18 @@ class StatController extends Controller
                     $firstHit = Carbon::parse($visitorGroup->first()->created_at);
                     $lastHit = Carbon::parse($visitorGroup->last()->created_at);
                     $sessionTime = $lastHit->diffInSeconds($firstHit);
-                    
+
                     $totalSessionTimeOld += $sessionTime;
                     $sessionCountOld++;
                 }
             }
-                
+
             $bounceRateOld = $visitorsOld > 0 ? ($singlePageSessionsOld / $visitorsOld) * 100 : 0;
             $avgSessionTimeOld = $sessionCountOld > 0 ? $totalSessionTimeOld / $sessionCountOld : 0;
-                  // Format average session time for display (MM:SS format)
+            // Format average session time for display (MM:SS format)
             $formattedAvgSessionTime = gmdate("i:s", round($avgSessionTimeValue));
             $formattedAvgSessionTimeOld = gmdate("i:s", round($avgSessionTimeOld));
-            
+
             return response()->json([
                 'visitors' => $visitorsCount,
                 'pageviews' => $pageviewsCount,
@@ -548,6 +553,91 @@ class StatController extends Controller
             ->first();
 
         return view('stats.container', ['view' => 'landing-pages', 'website' => $website, 'range' => $range, 'export' => 'stats.export.landing_pages', 'landingPages' => $landingPages, 'first' => $first, 'last' => $last, 'total' => $total]);
+    }
+
+    /**
+     * Show the Exit Pages stats page.
+     *
+     * @param Request $request
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\View\View
+     */
+    public function exitPages(Request $request, $id)
+    {
+        $website = Website::where('domain', $id)->firstOrFail();
+
+        if ($this->statsGuard($website)) {
+            return view('stats.password', ['website' => $website]);
+        }
+
+        $range = $this->range();
+        $search = $request->input('search');
+        $searchBy = in_array($request->input('search_by'), ['value']) ? $request->input('search_by') : 'value';
+        $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
+        $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
+        $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : config('settings.paginate');
+
+        $total = Stat::selectRaw('SUM(`count`) as `count`')
+            ->where([['website_id', '=', $website->id], ['name', '=', 'exit_page']])
+            ->whereBetween('date', [$range['from'], $range['to']])
+            ->first();
+
+        $exitPages = $this->getExitPages($website, $range, $search, $searchBy, $sortBy, $sort)
+            ->paginate($perPage)
+            ->appends(['from' => $range['from'], 'to' => $range['to'], 'search' => $search, 'search_by' => $searchBy, 'sort_by' => $sortBy, 'sort' => $sort]);        $first = $this->getExitPages($website, $range, $search, $searchBy, 'count', 'desc')
+            ->first();
+
+        $last = $this->getExitPages($website, $range, $search, $searchBy, 'count', 'asc')
+            ->first();
+
+        return view('stats.container', ['view' => 'exit-pages', 'website' => $website, 'range' => $range, 'export' => 'stats.export.exit_pages', 'exitPages' => $exitPages, 'first' => $first, 'last' => $last, 'total' => $total]);
+    }
+
+    /**
+     * Export the Exit Pages stats.
+     *
+     * @param Request $request
+     * @param $id
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\View\View|\Symfony\Component\HttpFoundation\StreamedResponse
+     * @throws CSV\CannotInsertRecord
+     */    public function exportExitPages(Request $request, $id)
+    {
+        $website = Website::where('domain', $id)->firstOrFail();
+
+        if ($this->statsGuard($website)) {
+            return view('stats.password', ['website' => $website]);
+        }
+
+        $range = $this->range();
+        $search = $request->input('search');
+        $searchBy = in_array($request->input('search_by'), ['value']) ? $request->input('search_by') : 'value';
+        $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
+        $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
+
+        return $this->exportCSV($request, $website, __('Exit pages'), $range, __('URL'), __('Visitors'), $this->getExitPages($website, $range, $search, $searchBy, $sortBy, $sort)->get());
+    }
+
+    /**
+     * Get the Exit Pages stats.
+     *
+     * @param $website
+     * @param $range
+     * @param null $search
+     * @param null $searchBy
+     * @param null $sortBy
+     * @param null $sort
+     * @return mixed
+     */
+    private function getExitPages($website, $range, $search = null, $searchBy = null, $sortBy = null, $sort = null)
+    {
+        return Stat::selectRaw('`value`, SUM(`count`) as `count`')
+            ->where([['website_id', '=', $website->id], ['name', '=', 'exit_page']])
+            ->when($search, function ($query) use ($search, $searchBy) {
+                return $query->searchValue($search);
+            })
+            ->whereBetween('date', [$range['from'], $range['to']])
+            ->groupBy('value')
+            ->orderBy($sortBy, $sort);
     }
 
     /**
@@ -1124,7 +1214,6 @@ class StatController extends Controller
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
 
-
         return $this->exportCSV($request, $website, __('Landing pages'), $range, __('URL'), __('Visitors'), $this->getLandingPages($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
 
@@ -1149,7 +1238,6 @@ class StatController extends Controller
         $searchBy = in_array($request->input('search_by'), ['value']) ? $request->input('search_by') : 'value';
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
-
 
         return $this->exportCSV($request, $website, __('Referrers'), $range, __('Website'), __('Visitors'), $this->getReferrers($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
@@ -1176,7 +1264,6 @@ class StatController extends Controller
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
 
-
         return $this->exportCSV($request, $website, __('Search engines'), $range, __('Website'), __('Visitors'), $this->getSearchEngines($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
 
@@ -1201,7 +1288,6 @@ class StatController extends Controller
         $searchBy = in_array($request->input('search_by'), ['value']) ? $request->input('search_by') : 'value';
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
-
 
         return $this->exportCSV($request, $website, __('Social networks'), $range, __('Website'), __('Visitors'), $this->getSocialNetworks($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
@@ -1228,7 +1314,6 @@ class StatController extends Controller
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
 
-
         return $this->exportCSV($request, $website, __('Campaigns'), $range, __('Name'), __('Visitors'), $this->getCampaigns($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
 
@@ -1253,7 +1338,6 @@ class StatController extends Controller
         $searchBy = in_array($request->input('search_by'), ['value']) ? $request->input('search_by') : 'value';
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
-
 
         return $this->exportCSV($request, $website, __('Continents'), $range, __('Name'), __('Visitors'), $this->getContinents($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
@@ -1281,8 +1365,6 @@ class StatController extends Controller
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
         $perPage = in_array($request->input('per_page'), [10, 25, 50, 100]) ? $request->input('per_page') : config('settings.paginate');
 
-
-
         return $this->exportCSV($request, $website, __('Countries'), $range, __('Name'), __('Visitors'), $this->getCountries($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
 
@@ -1307,7 +1389,6 @@ class StatController extends Controller
         $searchBy = in_array($request->input('search_by'), ['value']) ? $request->input('search_by') : 'value';
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
-
 
         return $this->exportCSV($request, $website, __('Cities'), $range, __('Name'), __('Visitors'), $this->getCities($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
@@ -1334,7 +1415,6 @@ class StatController extends Controller
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
 
-
         return $this->exportCSV($request, $website, __('Languages'), $range, __('Name'), __('Visitors'), $this->getLanguages($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
 
@@ -1359,7 +1439,6 @@ class StatController extends Controller
         $searchBy = in_array($request->input('search_by'), ['value']) ? $request->input('search_by') : 'value';
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
-
 
         return $this->exportCSV($request, $website, __('Operating systems'), $range, __('Name'), __('Visitors'), $this->getOperatingSystems($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
@@ -1386,7 +1465,6 @@ class StatController extends Controller
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
 
-
         return $this->exportCSV($request, $website, __('Browsers'), $range, __('Name'), __('Visitors'), $this->getBrowsers($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
 
@@ -1411,7 +1489,6 @@ class StatController extends Controller
         $searchBy = in_array($request->input('search_by'), ['value']) ? $request->input('search_by') : 'value';
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
-
 
         return $this->exportCSV($request, $website, __('Screen resolutions'), $range, __('Size'), __('Visitors'), $this->getScreenResolutions($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
@@ -1438,7 +1515,6 @@ class StatController extends Controller
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
 
-
         return $this->exportCSV($request, $website, __('Devices'), $range, __('Type'), __('Visitors'), $this->getDevices($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
 
@@ -1463,7 +1539,6 @@ class StatController extends Controller
         $searchBy = in_array($request->input('search_by'), ['value']) ? $request->input('search_by') : 'value';
         $sortBy = in_array($request->input('sort_by'), ['count', 'value']) ? $request->input('sort_by') : 'count';
         $sort = in_array($request->input('sort'), ['asc', 'desc']) ? $request->input('sort') : 'desc';
-
 
         return $this->exportCSV($request, $website, __('Events'), $range, __('Name'), __('Completions'), $this->getEvents($website, $range, $search, $searchBy, $sortBy, $sort)->get());
     }
@@ -1787,7 +1862,9 @@ class StatController extends Controller
             ->whereBetween('date', [$range['from'], $range['to']])
             ->groupBy('value')
             ->orderBy($sortBy, $sort);
-    }    /**
+    }
+
+    /**
      * Get the visitors, pageviews, or bounce rate in a formatted way, based on the date range.
      *
      * @param $website
@@ -1812,8 +1889,8 @@ class StatController extends Controller
             }
         } else {
             $rows = Stat::select([
-                    DB::raw("date_format(`date`, '". str_replace(['Y', 'm', 'd'], ['%Y', '%m', '%d'], $range['format'])."') as `date_result`, SUM(`count`) as `aggregate`")
-                ])
+                DB::raw("date_format(`date`, '" . str_replace(['Y', 'm', 'd'], ['%Y', '%m', '%d'], $range['format']) . "') as `date_result`, SUM(`count`) as `aggregate`")
+            ])
                 ->where([['website_id', '=', $website->id], ['name', '=', $type]])
                 ->whereBetween('date', [$range['from'], $range['to']])
                 ->groupBy('date_result')
@@ -1926,7 +2003,7 @@ class StatController extends Controller
     private function statsGuard($website)
     {
         // If the link stats is not set to public
-        if($website->privacy !== 0) {
+        if ($website->privacy !== 0) {
             $user = Auth::user();
 
             // If the website's privacy is set to private
