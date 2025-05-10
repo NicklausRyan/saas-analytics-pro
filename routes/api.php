@@ -11,7 +11,7 @@
 |
 */
 
-Route::prefix('v1')->middleware('auth:api')->group(function () {
+Route::prefix('v1')->middleware(['auth:api', 'stripe.key.restriction'])->group(function () {
     Route::apiResource('stats', 'API\StatController', ['parameters' => [
         'stats' => 'id'
     ], 'only' => ['show'], 'as' => 'api'])->middleware('api.guard');
@@ -30,3 +30,4 @@ Route::prefix('v1')->middleware('auth:api')->group(function () {
 });
 
 Route::post('event', 'API\EventController@index')->name('event');
+Route::post('webhook', 'API\WebhookController@track')->name('webhook');

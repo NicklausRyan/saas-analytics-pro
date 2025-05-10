@@ -25,9 +25,7 @@
                         <strong>{{ $errors->first('demo_url') }}</strong>
                     </span>
                 @endif
-            </div>
-
-            <div class="form-group">
+            </div>            <div class="form-group">
                 <label for="i-cdn-url" class="d-flex align-items-center">{{ __(':name URL', ['name' => __('CDN')]) }} <span data-tooltip="true" title="{{ __('The CDN URL where the :name file is hosted.', ['name' => 'script.js']) }}" class="d-flex align-items-center {{ (__('lang_dir') == 'rtl' ? 'mr-2' : 'ml-2') }}">@include('icons.info', ['class' => 'fill-current text-muted width-4 height-4'])</span></label>
                 <input type="text" dir="ltr" name="cdn_url" id="i-cdn-url" class="form-control{{ $errors->has('cdn_url') ? ' is-invalid' : '' }}" value="{{ old('settings.cdn_url') ?? config('settings.cdn_url') }}">
                 @if ($errors->has('cdn_url'))
@@ -35,6 +33,19 @@
                         <strong>{{ $errors->first('cdn_url') }}</strong>
                     </span>
                 @endif
+            </div>            <div class="form-group">
+                <label for="i-key-restriction" class="d-flex align-items-center">{{ __('Restricted Key Linking') }} <span data-tooltip="true" title="{{ __('Enable domain verification for API keys. When enabled, API keys must be linked to specific website domains.') }}" class="d-flex align-items-center {{ (__('lang_dir') == 'rtl' ? 'mr-2' : 'ml-2') }}">@include('icons.info', ['class' => 'fill-current text-muted width-4 height-4'])</span></label>
+                <select name="key_restriction" id="i-key-restriction" class="custom-select{{ $errors->has('key_restriction') ? ' is-invalid' : '' }}">
+                    @foreach([0 => __('Disabled'), 1 => __('Enabled')] as $key => $value)
+                        <option value="{{ $key }}" @if ((old('key_restriction') !== null && old('key_restriction') == $key) || (config('settings.key_restriction') == $key && old('key_restriction') == null)) selected @endif>{{ $value }}</option>
+                    @endforeach
+                </select>
+                @if ($errors->has('key_restriction'))
+                    <span class="invalid-feedback d-block" role="alert">
+                        <strong>{{ $errors->first('key_restriction') }}</strong>
+                    </span>
+                @endif
+                <small class="form-text text-muted">{{ __('When enabled, Stripe API keys and tracking codes will only work with the domains they\'re linked to.') }}</small>
             </div>
 
             <button type="submit" name="submit" class="btn btn-primary">{{ __('Save') }}</button>

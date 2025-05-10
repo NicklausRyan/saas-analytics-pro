@@ -32,9 +32,7 @@
 
             @if(request()->is('admin/*'))
                 <input type="hidden" name="user_id" value="{{ $website->user->id }}">
-            @endif
-
-            <div class="form-group">
+            @endif            <div class="form-group">
                 <label for="i-domain">{{ __('Domain') }}</label>
                 <div class="input-group mb-3">
                     <div class="input-group-prepend">
@@ -47,6 +45,61 @@
                         </span>
                     @endif
                 </div>
+            </div>            @if(config('settings.key_restriction') == 1)
+            <div class="form-group">
+                <label for="i-domain-key">{{ __('Domain Key') }}</label>
+                <div class="input-group">
+                    <input type="text" dir="ltr" id="i-domain-key" class="form-control" value="{{ $website->domain_key }}" readonly>
+                    <div class="input-group-append">
+                        <div class="btn btn-primary" data-tooltip-copy="true" title="{{ __('Copy') }}" data-text-copy="{{ __('Copy') }}" data-text-copied="{{ __('Copied') }}" data-clipboard="true" data-clipboard-target="#i-domain-key">{{ __('Copy') }}</div>
+                    </div>
+                </div>
+                <small class="form-text text-muted">{{ __('Required for API calls when key restriction is enabled.') }}</small>
+            </div>
+
+            <div class="form-group">
+                <div class="custom-control custom-checkbox">
+                    <input type="checkbox" class="custom-control-input" name="regenerate_domain_key" id="i-regenerate-domain-key">
+                    <label class="custom-control-label" for="i-regenerate-domain-key">{{ __('Regenerate domain key') }}</label>
+                </div>
+            </div>
+            @endif
+            
+            <div class="form-group">
+                <label for="i-stripe-key">{{ __('Stripe Restricted API Key') }} <span class="optional">({{ __('Optional') }})</span></label>
+                <div class="input-group">
+                    <input type="text" dir="ltr" name="stripe_key" class="form-control{{ $errors->has('stripe_key') ? ' is-invalid' : '' }}" id="i-stripe-key" value="{{ $website->stripe_key }}" placeholder="rk_live_...">
+                    <div class="input-group-append">
+                        <span class="input-group-text"><img src="{{ url('/') }}/images/icons/payments/stripe.svg" class="width-4 height-4"></span>
+                    </div>
+                </div>
+                @if ($errors->has('stripe_key'))
+                    <span class="invalid-feedback d-block" role="alert">
+                        <strong>{{ $errors->first('stripe_key') }}</strong>
+                    </span>
+                @endif
+                <small class="form-text text-muted">{{ __('Enter a Stripe restricted API key to be used for payment processing with this website.') }}</small>
+            </div>            <div class="form-group">
+                <label for="i-stripe-api-key">{{ __('Stripe Secret API Key') }} <span class="optional">({{ __('Optional') }})</span></label>
+                <div class="input-group">
+                    <input type="text" dir="ltr" name="stripe_api_key" class="form-control{{ $errors->has('stripe_api_key') ? ' is-invalid' : '' }}" id="i-stripe-api-key" value="{{ $website->stripe_api_key }}" placeholder="sk_live_...">
+                    <div class="input-group-append">
+                        <span class="input-group-text"><img src="{{ url('/') }}/images/icons/payments/stripe.svg" class="width-4 height-4"></span>
+                    </div>
+                </div>
+                @if ($errors->has('stripe_api_key'))
+                    <span class="invalid-feedback d-block" role="alert">
+                        <strong>{{ $errors->first('stripe_api_key') }}</strong>
+                    </span>
+                @endif
+                <small class="form-text text-muted">{{ __('Enter a Stripe secret API key that will be linked to this domain. When key restriction is enabled, this key will only work with this domain.') }}</small>
+                
+                @if(config('settings.key_restriction') == 1 && $website->stripe_api_key)
+                <div class="alert alert-success mt-2 mb-0 d-flex align-items-center">
+                    @include('icons.lock', ['class' => 'fill-current width-4 height-4 '.(__('lang_dir') == 'rtl' ? 'ml-2' : 'mr-2')])
+                    <div>{{ __('This API key is restricted to the :domain domain.', ['domain' => $website->domain]) }}</div>
+                </div>
+                @endif
             </div>
 
             <hr>

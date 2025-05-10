@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Mail\PaymentMail;
 use App\Models\Coupon;
 use App\Models\Payment;
+use App\Models\WebhookEvent;
+use App\Models\Website;
 use App\Traits\PaymentTrait;
+use App\Traits\WebhookLogTrait;
 use App\Models\User;
 use Carbon\Carbon;
 use GuzzleHttp\Client as HttpClient;
@@ -16,9 +19,7 @@ use Illuminate\Support\Facades\Mail;
 
 class WebhookController extends Controller
 {
-    use PaymentTrait;
-
-    /**
+    use PaymentTrait, WebhookLogTrait;    /**
      * Handle the PayPal webhook.
      *
      * @param Request $request
@@ -27,6 +28,15 @@ class WebhookController extends Controller
      */
     public function paypal(Request $request)
     {
+        $startTime = microtime(true);
+        $payload = json_decode($request->getContent());
+        $eventType = $payload->event_type ?? 'unknown';
+        $eventId = $payload->id ?? null;
+        $websiteId = null;
+        $isValidSignature = false;
+        $status = 'processing';
+        $errorMessage = null;
+        
         $httpClient = new HttpClient();
 
         $httpBaseUrl = 'https://'.(config('settings.paypal_mode') == 'sandbox' ? 'api-m.sandbox' : 'api-m').'.paypal.com/';
