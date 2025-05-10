@@ -13,7 +13,13 @@ use Illuminate\Support\Facades\Crypt;
  * @package App
  */
 class Website extends Model
-{
+{    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
+    protected $fillable = ['domain', 'domain_key', 'stripe_key', 'stripe_api_key', 'privacy', 'password', 'email', 'exclude_bots', 'exclude_params', 'exclude_ips'];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -101,9 +107,7 @@ class Website extends Model
     public function stats()
     {
         return $this->hasMany('App\Models\Stat')->where('website_id', $this->id);
-    }
-
-    /**
+    }    /**
      * Get the website's recent stats.
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
@@ -111,6 +115,16 @@ class Website extends Model
     public function recents()
     {
         return $this->hasMany('App\Models\Recent')->where('website_id', $this->id);
+    }
+    
+    /**
+     * Get the website's webhook events.
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function webhookEvents()
+    {
+        return $this->hasMany('App\Models\WebhookEvent')->where('website_id', $this->id);
     }
 
     /**

@@ -151,9 +151,7 @@
                         <small class="form-text text-muted">{{ __('One per line.') }}</small>
                     </div>
                 </div>
-            </div>
-
-            <div class="form-group">
+            </div>            <div class="form-group">
                 <div class="custom-control custom-checkbox">
                     <input type="hidden" name="exclude_bots" value="0">
                     <input type="checkbox" name="exclude_bots" value="1" class="custom-control-input {{ $errors->has('exclude_bots') ? ' is-invalid' : '' }}" id="customCheckbox3" @if(old('exclude_bots') || old('exclude_bots') == null) checked @endif>
@@ -167,6 +165,45 @@
                         @endif
                     </label>
                 </div>
+            </div>
+            
+            <hr>
+            
+            <div class="form-group">
+                <label for="i-stripe-key">{{ __('Stripe Restricted API Key') }} <span class="optional">({{ __('Optional') }})</span></label>
+                <div class="input-group">
+                    <input type="text" dir="ltr" name="stripe_key" class="form-control{{ $errors->has('stripe_key') ? ' is-invalid' : '' }}" id="i-stripe-key" value="{{ old('stripe_key') }}" placeholder="rk_live_...">
+                    <div class="input-group-append">
+                        <span class="input-group-text"><img src="{{ url('/') }}/images/icons/payments/stripe.svg" class="width-4 height-4"></span>
+                    </div>
+                </div>
+                @if ($errors->has('stripe_key'))
+                    <span class="invalid-feedback d-block" role="alert">
+                        <strong>{{ $errors->first('stripe_key') }}</strong>
+                    </span>
+                @endif
+                <small class="form-text text-muted">{{ __('Enter a Stripe restricted API key to be used for payment processing with this website.') }}</small>
+            </div>            <div class="form-group">
+                <label for="i-stripe-api-key">{{ __('Stripe Secret API Key') }} <span class="optional">({{ __('Optional') }})</span></label>
+                <div class="input-group">
+                    <input type="text" dir="ltr" name="stripe_api_key" class="form-control{{ $errors->has('stripe_api_key') ? ' is-invalid' : '' }}" id="i-stripe-api-key" value="{{ old('stripe_api_key') }}" placeholder="sk_live_...">
+                    <div class="input-group-append">
+                        <span class="input-group-text"><img src="{{ url('/') }}/images/icons/payments/stripe.svg" class="width-4 height-4"></span>
+                    </div>
+                </div>
+                @if ($errors->has('stripe_api_key'))
+                    <span class="invalid-feedback d-block" role="alert">
+                        <strong>{{ $errors->first('stripe_api_key') }}</strong>
+                    </span>
+                @endif
+                <small class="form-text text-muted">{{ __('Enter a Stripe secret API key that will be linked to this domain. When key restriction is enabled, this key will only work with this domain.') }}</small>
+                
+                @if(config('settings.key_restriction') == 1)
+                <div class="alert alert-info mt-2 mb-0 d-flex align-items-center">
+                    @include('icons.lock', ['class' => 'fill-current width-4 height-4 '.(__('lang_dir') == 'rtl' ? 'ml-2' : 'mr-2')])
+                    <div>{{ __('Key restriction is enabled. This API key will only work with this domain.') }}</div>
+                </div>
+                @endif
             </div>
 
             <hr>            <div class="form-group">

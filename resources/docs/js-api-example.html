@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>phpAnalytics JS API Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .example {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .code {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre;
+            overflow: auto;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .output {
+            margin-top: 10px;
+            min-height: 100px;
+            max-height: 300px;
+            overflow: auto;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .highlight {
+            background-color: #e3f2fd;
+            padding: 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>phpAnalytics JavaScript API Examples</h1>
+    
+    <p>This page demonstrates how to use the phpAnalytics JavaScript tracking API. Each example shows the code and its execution with live results.</p>
+    
+    <div class="example">
+        <h2>Installation</h2>
+        <p>To use the phpAnalytics JavaScript API, include the tracking script in your HTML:</p>
+        <div class="code">&lt;script id="ZwSg9rf6GA" 
+        src="https://yourdomain.com/js/script.js" 
+        data-host="https://yourdomain.com" 
+        data-key="your-domain-key" 
+        data-dnt="true" 
+        async&gt;&lt;/script&gt;</div>
+        <p>The script automatically starts tracking pageviews when loaded.</p>
+    </div>
+
+    <div class="container">
+        <div class="example">
+            <h2>Basic Event Tracking</h2>
+            <p>Track a simple event:</p>
+            <div class="code">window.pa.track({
+    name: 'button_click',
+    value: 1,
+    unit: 'click'
+});</div>
+            <button id="simple-event-button">Track Button Click</button>
+            <div class="output" id="simple-event-output">Results will appear here...</div>
+        </div>
+
+        <div class="example">
+            <h2>Event with Additional Data</h2>
+            <p>Track an event with additional custom data:</p>
+            <div class="code">window.pa.track({
+    name: 'form_submit',
+    value: 1,
+    unit: 'submission'
+}, null, {
+    form_type: 'contact',
+    user_type: 'new'
+});</div>
+            <button id="custom-data-button">Track Form Submit</button>
+            <div class="output" id="custom-data-output">Results will appear here...</div>
+        </div>
+
+        <div class="example">
+            <h2>Webhook API</h2>
+            <p>Use the webhook-compatible API:</p>
+            <div class="code">window.pa.webhook({
+    name: 'purchase',
+    value: 99.95,
+    unit: 'USD'
+}, {
+    product_id: '12345',
+    category: 'electronics'
+});</div>
+            <button id="webhook-button">Track Purchase</button>
+            <div class="output" id="webhook-output">Results will appear here...</div>
+        </div>
+
+        <div class="example">
+            <h2>Promise-Like Response Handling</h2>
+            <p>Handle success and error responses:</p>
+            <div class="code">window.pa.track({
+    name: 'download',
+    value: 1
+})
+.then(function(response) {
+    console.log('Success:', response);
+})
+.catch(function(error) {
+    console.error('Error:', error);
+});</div>
+            <button id="promise-button">Track with Promise</button>
+            <div class="output" id="promise-output">Results will appear here...</div>
+        </div>
+    </div>
+
+    <div class="example">
+        <h2>Custom Event Builder</h2>
+        <p>Build and track your own custom event:</p>
+        <div>
+            <label>Event Name:
+                <input type="text" id="event-name" value="custom_event">
+            </label>
+            <label>Event Value:
+                <input type="number" id="event-value" value="1">
+            </label>
+            <label>Event Unit:
+                <input type="text" id="event-unit" value="action">
+            </label>
+            <br>
+            <label>Custom Property Name:
+                <input type="text" id="custom-prop-name" value="category">
+            </label>
+            <label>Custom Property Value:
+                <input type="text" id="custom-prop-value" value="test">
+            </label>
+            <br>
+            <label>API Type:
+                <select id="api-type">
+                    <option value="track">track() - Standard API</option>
+                    <option value="webhook">webhook() - Webhook API</option>
+                </select>
+            </label>
+            <br>
+            <button id="custom-event-button">Track Custom Event</button>
+        </div>
+        <div class="code" id="custom-event-code">// Code will appear here...</div>
+        <div class="output" id="custom-event-output">Results will appear here...</div>
+    </div>
+
+    <div class="example">
+        <h2>Event Log</h2>
+        <p>All tracked events will appear here:</p>
+        <button id="clear-log">Clear Log</button>
+        <div class="output" id="event-log"></div>
+    </div>
+
+    <script>
+        // Mock the pa object for demonstration purposes
+        window.pa = {
+            track: function(event, referrer, options) {
+                console.log('track() called:', { event, referrer, options });
+                
+                // Create a simulated response
+                const response = {
+                    status: 200,
+                    response: { success: true, timestamp: new Date().toISOString() }
+                };
+                
+                // Log the event
+                logEvent('track', event, options);
+                
+                // Return a promise-like object
+                return {
+                    then: function(callback) {
+                        setTimeout(() => callback(response), 500);
+                        return this;
+                    },
+                    catch: function(callback) {
+                        return this;
+                    }
+                };
+            },
+            webhook: function(event, options) {
+                console.log('webhook() called:', { event, options });
+                
+                // Create a simulated response
+                const response = {
+                    status: 200,
+                    response: { success: true, timestamp: new Date().toISOString() }
+                };
+                
+                // Log the event
+                logEvent('webhook', event, options);
+                
+                // Return a promise-like object
+                return {
+                    then: function(callback) {
+                        setTimeout(() => callback(response), 500);
+                        return this;
+                    },
+                    catch: function(callback) {
+                        return this;
+                    }
+                };
+            }
+        };
+
+        // Event log function
+        function logEvent(method, event, options) {
+            const logEl = document.getElementById('event-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const eventData = JSON.stringify({ method, event, options }, null, 2);
+            
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<strong>${timestamp}</strong>: ${eventData}`;
+            logEntry.style.borderBottom = '1px solid #ccc';
+            logEntry.style.padding = '5px 0';
+            
+            logEl.insertBefore(logEntry, logEl.firstChild);
+        }
+
+        // Simple event button
+        document.getElementById('simple-event-button').addEventListener('click', function() {
+            const outputEl = document.getElementById('simple-event-output');
+            outputEl.innerHTML = 'Tracking...';
+            
+            window.pa.track({
+                name: 'button_click',
+                value: 1,
+                unit: 'click'
+            }).then(function(response) {
+                outputEl.innerHTML = `Status: ${response.status}\nResponse: ${JSON.stringify(response.response, null, 2)}`;
+            });
+        });
+
+        // Custom data button
+        document.getElementById('custom-data-button').addEventListener('click', function() {
+            const outputEl = document.getElementById('custom-data-output');
+            outputEl.innerHTML = 'Tracking...';
+            
+            window.pa.track({
+                name: 'form_submit',
+                value: 1,
+                unit: 'submission'
+            }, null, {
+                form_type: 'contact',
+                user_type: 'new'
+            }).then(function(response) {
+                outputEl.innerHTML = `Status: ${response.status}\nResponse: ${JSON.stringify(response.response, null, 2)}`;
+            });
+        });
+
+        // Webhook button
+        document.getElementById('webhook-button').addEventListener('click', function() {
+            const outputEl = document.getElementById('webhook-output');
+            outputEl.innerHTML = 'Tracking...';
+            
+            window.pa.webhook({
+                name: 'purchase',
+                value: 99.95,
+                unit: 'USD'
+            }, {
+                product_id: '12345',
+                category: 'electronics'
+            }).then(function(response) {
+                outputEl.innerHTML = `Status: ${response.status}\nResponse: ${JSON.stringify(response.response, null, 2)}`;
+            });
+        });
+
+        // Promise button
+        document.getElementById('promise-button').addEventListener('click', function() {
+            const outputEl = document.getElementById('promise-output');
+            outputEl.innerHTML = 'Tracking...';
+            
+            window.pa.track({
+                name: 'download',
+                value: 1
+            })
+            .then(function(response) {
+                outputEl.innerHTML = `Success:\nStatus: ${response.status}\nResponse: ${JSON.stringify(response.response, null, 2)}`;
+                console.log('Success:', response);
+            })
+            .catch(function(error) {
+                outputEl.innerHTML = `Error: ${error.message}`;
+                console.error('Error:', error);
+            });
+        });
+
+        // Custom event builder
+        document.getElementById('custom-event-button').addEventListener('click', function() {
+            const eventName = document.getElementById('event-name').value;
+            const eventValue = parseFloat(document.getElementById('event-value').value);
+            const eventUnit = document.getElementById('event-unit').value;
+            const customPropName = document.getElementById('custom-prop-name').value;
+            const customPropValue = document.getElementById('custom-prop-value').value;
+            const apiType = document.getElementById('api-type').value;
+            
+            const outputEl = document.getElementById('custom-event-output');
+            const codeEl = document.getElementById('custom-event-code');
+            
+            const eventObj = {
+                name: eventName,
+                value: eventValue,
+                unit: eventUnit
+            };
+            
+            const options = {};
+            options[customPropName] = customPropValue;
+            
+            // Generate code and execute
+            let code;
+            let result;
+            
+            if (apiType === 'track') {
+                code = `window.pa.track(${JSON.stringify(eventObj, null, 2)}, null, ${JSON.stringify(options, null, 2)})`;
+                result = window.pa.track(eventObj, null, options);
+            } else {
+                code = `window.pa.webhook(${JSON.stringify(eventObj, null, 2)}, ${JSON.stringify(options, null, 2)})`;
+                result = window.pa.webhook(eventObj, options);
+            }
+            
+            codeEl.textContent = code;
+            outputEl.innerHTML = 'Tracking...';
+            
+            result.then(function(response) {
+                outputEl.innerHTML = `Status: ${response.status}\nResponse: ${JSON.stringify(response.response, null, 2)}`;
+            });
+        });
+
+        // Clear log button
+        document.getElementById('clear-log').addEventListener('click', function() {
+            document.getElementById('event-log').innerHTML = '';
+        });
+    </script>
+
+    <footer>
+        <p><strong>Note:</strong> This is a demonstration page. The analytics API calls are simulated and do not send real data to any server.</p>
+        <p>For more information, see the <a href="client-side-js-tracking.md">phpAnalytics JavaScript API Documentation</a>.</p>
+    </footer>
+</body>
+</html>

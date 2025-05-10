@@ -19,11 +19,10 @@ class EventController extends Controller
      * @return int|void
      */
     public function index(Request $request)
-    {
-        $page = $this->parseUrl($request->input('page'));
+    {        $page = $this->parseUrl($request->input('page'));
 
         $website = DB::table('websites')
-            ->select(['websites.id', 'websites.domain', 'websites.user_id', 'websites.exclude_bots', 'websites.exclude_ips', 'websites.exclude_params', 'users.can_track'])
+            ->select(['websites.id', 'websites.domain', 'websites.domain_key', 'websites.user_id', 'websites.exclude_bots', 'websites.exclude_ips', 'websites.exclude_params', 'users.can_track'])
             ->join('users', 'users.id', '=', 'websites.user_id')
             ->where('websites.domain', '=', $page['non_www_host'] ?? null)
             ->first();
@@ -36,6 +35,15 @@ class EventController extends Controller
         // If the website does not exist
         if (isset($website->can_track) == false) {
             return 404;
+        }
+        
+        // If key restriction is enabled, validate the domain key
+        if (config('settings.key_restriction') == 1) {
+            $domain_key = $request->header('X-Domain-Key');
+            
+            if (!$domain_key || $domain_key !== $website->domain_key) {
+                return 403;
+            }
         }
 
         // If the website has any excluded IPs
